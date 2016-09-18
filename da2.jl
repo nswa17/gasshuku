@@ -266,7 +266,7 @@ function generate_random_preference_data(m, n, one2many = false)
 end
 """
 
-function generate_random_preference_data(m, n; complete = true, stage = 0)
+function generate_random_preference_data(m, n; complete = true, m_stage = 0, f_stage = 0)#katahou dake complete
     m_prefs = Array(Int, n+1, m)
     f_prefs = Array(Int, m+1, n)
     if complete
@@ -280,23 +280,25 @@ function generate_random_preference_data(m, n; complete = true, stage = 0)
         end
         return m_prefs, f_prefs
     else
-        if stage == 0
+        if m_stage == 0
             for i in 1:m
                 m_prefs[:, i] = shuffle(collect(0:n))
             end
+        else
+            for i in 1:m
+                m_prefs[:, i] = insert!(shuffle(collect(1:n)), n-m_stage+2, 0)
+            end
+        end
+        if f_stage == 0
             for j in 1:n
                 f_prefs[:, j] = shuffle(collect(0:m))
             end
-            return m_prefs, f_prefs
         else
-            for i in 1:m
-                m_prefs[:, i] = insert!(shuffle(collect(1:n)), n-stage+2, 0)
-            end
             for j in 1:n
-                f_prefs[:, j] = insert!(shuffle(collect(1:m)), m-stage+2, 0)
+                f_prefs[:, j] = insert!(shuffle(collect(1:m)), m-f_stage+2, 0)
             end
-            return m_prefs, f_prefs
         end
+        return m_prefs, f_prefs
     end
 end
 
