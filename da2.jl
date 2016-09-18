@@ -1,5 +1,5 @@
 #DA Algorithm
-#Todo: Algorithm2, alg to list all stable matchings, R_men, R_women
+#Todo: utility function is broken
 
 using DataStructures
 using RCall
@@ -8,28 +8,32 @@ using PyPlot
 
 set_x_as(n) = rand(n)
 set_x_ds(m) = rand(m)
-utility(beta, gamma, i, j, f_x_as, m_x_ds, f_x_ds, epsilons) = beta*f_x_as[j] - gamma*(m_x_ds[i] - f_x_ds[j])^2 + epsilons[i, j]
-function set_epsilons(m, n)
+#utility(beta, gamma, i, j, f_x_as, m_x_ds, f_x_ds, epsilons) = beta * f_x_as[j] - gamma*(m_x_ds[i] - f_x_ds[j])^2 + epsilons[i, j]
+utility(beta, gamma, i, j, f_x_as, m_x_ds, f_x_ds) = beta * f_x_as[j] - gamma*(m_x_ds[i] - f_x_ds[j])^2 + logistic()
+
+"""
+function set_epsilons(m, n)#ok
     #d = LogNormal()
     #return reshape(rand(d, m*n), m, n)
     return reshape([logistic() for i in 1:m*n], m, n)
 end
+"""
 
-function logistic()
+function logistic()#ok
     u = rand()
     return log(u/(1-u))
 end
 
-function get_mn_prefs_by_utility(m, n, beta, gamma, m_x_as, f_x_as, m_x_ds, f_x_ds, epsilons)
+function get_mn_prefs_by_utility(m, n, beta, gamma, m_x_as, f_x_as, m_x_ds, f_x_ds)
     m_prefs = Array(Int, n+1, m)
     f_prefs = Array(Int, m+1, n)
 
     for i in 1:m
-        m_prefs[1:(end-1), i] = sort(1:n, by = j -> utility(beta, gamma, i, j, f_x_as, m_x_ds, f_x_ds, epsilons), rev=true)
+        m_prefs[1:(end-1), i] = sort(1:n, by = j -> utility(beta, gamma, i, j, f_x_as, m_x_ds, f_x_ds), rev=true)
         m_prefs[end, i] = 0
     end
     for j in 1:n
-        f_prefs[1:(end-1), j] = sort(1:m, by = i -> utility(beta, gamma, j, i, m_x_as, f_x_ds, m_x_ds, transpose(epsilons)), rev=true)
+        f_prefs[1:(end-1), j] = sort(1:m, by = i -> utility(beta, gamma, j, i, m_x_as, f_x_ds, m_x_ds), rev=true)
         f_prefs[end, j] = 0
     end
     return m_prefs, f_prefs
