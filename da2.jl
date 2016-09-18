@@ -266,7 +266,7 @@ function generate_random_preference_data(m, n, one2many = false)
 end
 """
 
-function generate_random_preference_data(m, n; complete = true)
+function generate_random_preference_data(m, n; complete = true, stage = 0)
     m_prefs = Array(Int, n+1, m)
     f_prefs = Array(Int, m+1, n)
     if complete
@@ -280,13 +280,23 @@ function generate_random_preference_data(m, n; complete = true)
         end
         return m_prefs, f_prefs
     else
-        for i in 1:m
-            m_prefs[:, i] = shuffle(collect(0:n))
+        if stage == 0
+            for i in 1:m
+                m_prefs[:, i] = shuffle(collect(0:n))
+            end
+            for j in 1:n
+                f_prefs[:, j] = shuffle(collect(0:m))
+            end
+            return m_prefs, f_prefs
+        else
+            for i in 1:m
+                m_prefs[:, i] = insert!(shuffle(collect(1:n)), n-stage+2, 0)
+            end
+            for j in 1:n
+                f_prefs[:, j] = insert!(shuffle(collect(1:m)), m-stage+2, 0)
+            end
+            return m_prefs, f_prefs
         end
-        for j in 1:n
-            f_prefs[:, j] = shuffle(collect(0:m))
-        end
-        return m_prefs, f_prefs
     end
 end
 
