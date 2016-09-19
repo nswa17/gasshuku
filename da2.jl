@@ -29,11 +29,13 @@ function get_mn_prefs_by_utility(m, n, beta, gamma, m_x_as, f_x_as, m_x_ds, f_x_
     f_prefs = Array(Int, m+1, n)
 
     for i in 1:m
-        m_prefs[1:(end-1), i] = sort(1:n, by = j -> utility(beta, gamma, i, j, f_x_as, m_x_ds, f_x_ds), rev=true)
+        m_utility = map(j -> utility(beta, gamma, i, j, f_x_as, m_x_ds, f_x_ds), 1:n)
+        m_prefs[1:(end-1), i] = sortperm(m_utility, rev=true)
         m_prefs[end, i] = 0
     end
     for j in 1:n
-        f_prefs[1:(end-1), j] = sort(1:m, by = i -> utility(beta, gamma, j, i, m_x_as, f_x_ds, m_x_ds), rev=true)
+        n_utility = map(i -> utility(beta, gamma, j, i, m_x_as, f_x_ds, m_x_ds), 1:m)
+        f_prefs[1:(end-1), j] = sortperm(n_utility, rev=true)
         f_prefs[end, j] = 0
     end
     return m_prefs, f_prefs
