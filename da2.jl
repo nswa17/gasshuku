@@ -108,6 +108,14 @@ function pmm_fast(m_prefs, f_prefs)
     return length(filter(x -> x > 1, map(length, m_stable_partner_list)))/size(m_prefs, 2)
 end
 
+function pmm_fast_revised(m_prefs, f_prefs)
+    m_matched_mosm, f_matched_mosm = call_match(m_prefs, f_prefs)
+    m_matched_wosm, f_matched_wosm = call_match_wosm(m_prefs, f_prefs)
+
+    multi = length(filter(i -> m_matched_wosm[i] != m_matched_mosm[i], 1:length(m_matched_mosm)))
+    return multi/size(m_prefs, 2)
+end
+
 function call_match{T <: Integer}(m_prefs::Array{T, 2}, f_prefs::Array{T, 2})
     m::Int = size(m_prefs, 2)
     n::Int = size(f_prefs, 2)
@@ -302,6 +310,42 @@ function generate_random_preference_data(m, n; complete = true, m_stage = 0, f_s
         else
             for j in 1:n
                 f_prefs[:, j] = insert!(shuffle(collect(1:m)), m-f_stage+2, 0)
+            end
+        end
+        return m_prefs, f_prefs
+    end
+end
+
+function generate_random_preference_data_revised(m, n; complete = true, m_place = 0, f_place = 0)#katahou dake complete
+    m_prefs = Array(Int, n+1, m)
+    f_prefs = Array(Int, m+1, n)
+    if complete
+        for i in 1:m
+            m_prefs[1:(end-1), i] = shuffle(collect(1:n))
+            m_prefs[end, i] = 0
+        end
+        for j in 1:n
+            f_prefs[1:(end-1), j] = shuffle(collect(1:m))
+            f_prefs[end, j] = 0
+        end
+        return m_prefs, f_prefs
+    else
+        if m_place == 0
+            for i in 1:m
+                m_prefs[:, i] = shuffle(collect(0:n))
+            end
+        else
+            for i in 1:m
+                m_prefs[:, i] = insert!(shuffle(collect(1:n)), m_place, 0)
+            end
+        end
+        if f_place == 0
+            for j in 1:n
+                f_prefs[:, j] = shuffle(collect(0:m))
+            end
+        else
+            for j in 1:n
+                f_prefs[:, j] = insert!(shuffle(collect(1:m)), f_place, 0)
             end
         end
         return m_prefs, f_prefs
