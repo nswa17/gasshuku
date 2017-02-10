@@ -108,14 +108,6 @@ function pmm_fast(m_prefs, f_prefs)
     return length(filter(x -> x > 1, map(length, m_stable_partner_list)))/size(m_prefs, 2)
 end
 
-function pmm_fast_revised(m_prefs, f_prefs)
-    m_matched_mosm, f_matched_mosm = call_match(m_prefs, f_prefs)
-    m_matched_wosm, f_matched_wosm = call_match_wosm(m_prefs, f_prefs)
-
-    multi = length(filter(i -> m_matched_wosm[i] != m_matched_mosm[i], 1:length(m_matched_mosm)))
-    return multi/size(m_prefs, 2)
-end
-
 function call_match{T <: Integer}(m_prefs::Array{T, 2}, f_prefs::Array{T, 2})
     m::Int = size(m_prefs, 2)
     n::Int = size(f_prefs, 2)
@@ -132,22 +124,6 @@ function call_match{T <: Integer}(m_prefs::Array{T, 2}, f_prefs::Array{T, 2})
     return convert_pointer_to_list(m, f_matched)
 end
 call_match_wosm(m_prefs, f_prefs) = reverse(call_match(f_prefs, m_prefs))
-
-function call_match_sosm{T <: Integer}(m_prefs::Array{T, 2}, f_prefs::Array{T, 2}, caps::Array{T, 1})
-    m::Int = size(m_prefs, 2)
-    n::Int = size(f_prefs, 2)
-
-    f_ranks = get_ranks(f_prefs)
-    m_pointers = zeros(Int, m)
-    f_pointers = [binary_maxheap(Int) for j in 1:n] ### f_pointers :: (m x n) matrix
-
-    m_matched_tf = falses(m)
-    m_offers = zeros(Int, 2, m+1)
-    m_offers[1, 1] = 1
-
-    da_match(m, n, f_ranks, m_prefs, f_prefs, m_pointers, f_pointers, m_matched_tf, m_offers, caps)
-    return convert_pointer_to_list(m, n, f_pointers, f_prefs, caps)
-end
 
 @inbounds function get_ranks{T <: Integer}(prefs::Array{T, 2})
     ranks = Array(eltype(prefs), size(prefs))
@@ -166,33 +142,6 @@ end
 function convert_pointer_to_list{T <: Integer}(m::Int, f_matched::Array{T, 1})
     m_matched = [findfirst(f_matched, i) for i in 1:m]
     return m_matched, f_matched
-end
-
-function convert_pointer_to_list(m::Int, n::Int, f_pointers, f_prefs, caps)
-    f_matched = zeros(Int, sum(caps))
-    m_matched = zeros(Int, m)
-    indptr = Array(Int, n+1)
-    i::Int = 0
-    indptr[1] = 1
-    for i in 1:n
-        indptr[i+1] = indptr[i] + caps[i]
-    end
-
-    total = 1
-    for j in 1:n
-        for c in 1:caps[j]
-            if isempty(f_pointers[j])
-                f_matched[total] = 0
-            else
-                i = pop!(f_pointers[j])
-                f_matched[total] = f_prefs[i, j]
-                m_matched[f_prefs[i, j]] = j
-            end
-            total += 1
-        end
-    end
-
-    return m_matched, f_matched, indptr
 end
 
 @inbounds function proceed_pointer!{T <: Integer}(m::Int, n::Int, m_pointers::Array{T, 1}, m_matched_tf, m_prefs)
@@ -238,29 +187,6 @@ end
                 m_matched_tf[m_offers[1, k]] = true
             end
         end
-    end
-end
-
-@inbounds function decide_to_accept!{T <: Integer}(f_pointers, f_ranks::Array{T, 2}, f_prefs::Array{T, 2}, m_offers, m_matched_tf, caps::Array{T, 1})
-    for k in 1:length(m_offers)
-        m_offers[1, k] == 0 && break
-        i = m_offers[1, k]
-        j = m_offers[2, k]
-        if f_ranks[end, j] > f_ranks[i, j]
-            push!(f_pointers[j], f_ranks[i, j])
-            m_matched_tf[i] = true
-            if caps[j] < length(f_pointers[j])# if f's matching male reaches to the cap
-                m_matched_tf[f_prefs[pop!(f_pointers[j]), j]] = false
-            end
-        end
-    end
-end
-
-function da_match{T <: Integer}(m::Int, n::Int, f_ranks::Array{T, 2}, m_prefs::Array{T, 2}, f_prefs::Array{T, 2}, m_pointers::Array{T, 1}, f_pointers, m_matched_tf, m_offers, caps::Array{T, 1})
-    while m_offers[1, 1] != 0
-        proceed_pointer!(m, n, m_pointers, m_matched_tf, m_prefs)
-        create_offers!(m, m_prefs, m_matched_tf, m_pointers, m_offers)
-        decide_to_accept!(f_pointers, f_ranks, f_prefs, m_offers, m_matched_tf, caps)
     end
 end
 
@@ -332,6 +258,20 @@ function check_results(m_matched, f_pointers)
     return true
 end
 
+"""
+function generate_random_preference_data(m, n, one2many = false)
+    m_prefs = Array(Int, n+1, m)
+    f_prefs = one2many ? Array(Int, m, n) : Array(Int, m+1, n)
+    for i in 1:m
+        m_prefs[:, i] = shuffle(collect(0:n))
+    end
+    for j in 1:n
+        f_prefs[:, j] = one2many ? shuffle(collect(1:m)) : shuffle(collect(0:m))
+    end
+    return m_prefs, f_prefs
+end
+"""
+
 function generate_random_preference_data(m, n; complete = true, m_stage = 0, f_stage = 0)#katahou dake complete
     m_prefs = Array(Int, n+1, m)
     f_prefs = Array(Int, m+1, n)
@@ -366,62 +306,6 @@ function generate_random_preference_data(m, n; complete = true, m_stage = 0, f_s
         end
         return m_prefs, f_prefs
     end
-end
-
-function generate_random_preference_data_revised(m, n; complete = true, m_place = 0, f_place = 0)#katahou dake complete
-    m_prefs = Array(Int, n+1, m)
-    f_prefs = Array(Int, m+1, n)
-    if complete
-        for i in 1:m
-            m_prefs[1:(end-1), i] = shuffle(collect(1:n))
-            m_prefs[end, i] = 0
-        end
-        for j in 1:n
-            f_prefs[1:(end-1), j] = shuffle(collect(1:m))
-            f_prefs[end, j] = 0
-        end
-        return m_prefs, f_prefs
-    else
-        if m_place == 0
-            for i in 1:m
-                m_prefs[:, i] = shuffle(collect(0:n))
-            end
-        else
-            for i in 1:m
-                m_prefs[:, i] = insert!(shuffle(collect(1:n)), m_place, 0)
-            end
-        end
-        if f_place == 0
-            for j in 1:n
-                f_prefs[:, j] = shuffle(collect(0:m))
-            end
-        else
-            for j in 1:n
-                f_prefs[:, j] = insert!(shuffle(collect(1:m)), f_place, 0)
-            end
-        end
-        return m_prefs, f_prefs
-    end
-end
-
-function generate_random_preference_data_one2many(m, n; complete = true)
-    m_prefs = Array(Int, n+1, m)
-    f_prefs = Array(Int, m, n)
-    if complete
-        for i in 1:m
-            m_prefs[1:(end-1), i] = shuffle(collect(1:n))
-            m_prefs[end, i] = 0
-        end
-    else
-        for i in 1:m
-            m_prefs[:, i] = shuffle(collect(0:n))
-        end
-    end
-    for j in 1:n
-        f_prefs[:, j] = shuffle(collect(1:m))
-    end
-
-    return m_prefs, f_prefs
 end
 
 function check_data(m_prefs, f_prefs)
@@ -499,33 +383,6 @@ function r_men(m_matched, m_prefs)
     return s/matched_num
 end
 r_women = r_men
-r_student = r_men
-
-"""
-function r_college(c_matched, indptr, c_prefs)
-    matched_num = 0
-    s = 0
-    for i in 1:length(indptr)+1
-        indptr[i] == indptr[i+1] && continue
-        matched_num += 1
-        s += mean([findfirst(c_prefs[:, j], k) for k in c_matched[indptr[i]:indptr[i+1]-1]])
-    end
-    return s/matched_num
-end
-"""
-function r_college(c_matched, indptr, c_prefs)
-    matched_num = 0
-    s = 0
-    for col in 1:length(indptr)-1
-        for ind in indptr[col]:indptr[col+1]-1
-            i = c_matched[ind]
-            i == 0 && continue
-            matched_num += 1
-            s += findfirst(c_prefs[:, col], i)
-        end
-    end
-    return s/matched_num
-end
 
 function pmm(matchings, m_prefs, f_prefs)#Percentage of matched men with multiple stable partner
     c = 0
